@@ -20,6 +20,7 @@ def get_func_args(func: Callable):
 
 
 def call_from_cfg(func: Callable, cfg: dict, **kwargs):
+    """Execute arg's action, like '-t train' etc."""
     cfg = dotdict(cfg)
     cfg.update(kwargs)
     func_args = get_func_args(func)

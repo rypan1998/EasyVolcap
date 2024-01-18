@@ -51,14 +51,14 @@ def main(args):
 
     # Dicts preserve insertion order in Python 3.7+. Same in CPython 3.6, but it's an implementation detail.
     easycams = dict(sorted(easycams.items(), key=lambda item: item[0]))
-    write_camera(easycams, args.output)
+    write_camera(easycams, args.output) # export intri.yml & extri.yml
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_root', type=str, default='data/iphone/hdr_412')
     parser.add_argument('--colmap', type=str, default='colmap/colmap_sparse/0')
-    parser.add_argument('--output', type=str, default='')
+    parser.add_argument('--output', type=str, default='', help="*.yml file path")
     parser.add_argument('--sub', type=str, default='')  # only camera name containing this string will be saved
     parser.add_argument('--scale', type=float, default=1.0)
     args = parser.parse_args()

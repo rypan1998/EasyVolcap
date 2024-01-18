@@ -24,6 +24,7 @@ from easyvolcap.models.samplers.importance_sampler import ImportanceSampler
 from easyvolcap.models.renderers.volume_renderer import VolumeRenderer
 from easyvolcap.models.supervisors.volumetric_video_supervisor import VolumetricVideoSupervisor
 
+#  FIXME what is φ ?
 # sampler (o, d, t -> z -> xyztθφ) ->
 # network (xyztθφ -> rgb, occ) ->
 # renderer (rgb, occ -> output) ->
@@ -89,7 +90,7 @@ class VolumetricVideoModel(nn.Module):
     def render_rays(self,  # used for vanialla NeRF training
                     ray_o: torch.Tensor, ray_d: torch.Tensor, near: torch.Tensor, far: torch.Tensor, t: torch.Tensor,
                     batch: dotdict):
-        # This is the main code path for training
+        """This is the main code path for training"""
         # Sampler
         xyz, dir, t, dist = self.sampler.sample(ray_o, ray_d, near, far, t, batch)  # B, P, S
 
@@ -232,7 +233,7 @@ class VolumetricVideoModel(nn.Module):
             rendering_function = function  # when not chunking, do not move things around
 
         timer.record()
-        output = rendering_function(*input, batch=batch)
+        output = rendering_function(*input, batch=batch) # NOTE: invoke render_rays() function.
         output.time = timer.record('model')
 
         # Loss computing part of the network

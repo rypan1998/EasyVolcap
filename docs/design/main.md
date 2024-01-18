@@ -5,13 +5,17 @@
 Here's a directory tree of the core modules of EasyVolcap.
 I commended on the directory structure of the `easyvolcap` folder, which should give you a general sense about our codebase's organization.
 
+In `easyvolcap\engine\__init__.py` 
+
 ```shell
 easyvolcap
 ├── engine # configuration and module registration control
-│   ├── __init__.py # the entry point of EasyVolcap
-│   ├── config.py
-│   ├── registry.py
-│   └── ...
+│   ├── __init__.py # the entry point of EasyVolcap, args & cfg in here!
+│   ├── config.py # parse command.
+│   ├── registry.py # module registeration function set.
+│   ├── ... # import from mmvc, like path.py, relied by config.py & registry.py
+│   └── handlers # deal with different file format, like json, yaml etc .
+│       └── ... # like yaml_handler.py etc
 ├── dataloaders # basic torch multi-process dataloader
 │   ├── datasets
 │   │   ├── volumetric_video_dataset.py # multi-view dataset, with sharding, memory storage, jpeg/png compression
@@ -19,6 +23,7 @@ easyvolcap
 │   ├── datasamplers.py # controls the sampling process (view? frame?)
 │   └── volumetric_video_dataloader.py
 ├── models # a `model` controls the flow of batch -> output
+│   ├── volumetric_video_model.py # entry point
 │   ├── cameras # make camera parameters optimizable
 │   │   ├── optimizable_camera.py
 │   │   └── ...
@@ -40,7 +45,6 @@ easyvolcap
 │   ├── supervisors # compute losses
 │   │   ├── volumetric_video_supervisor.py
 │   │   └── ...
-│   ├── volumetric_video_model.py
 │   └── ...
 ├── runners
 │   ├── evaluators # compute metrics and the call visualizers
@@ -56,9 +60,9 @@ easyvolcap
 │   ├── volumetric_video_runner.py # controls the training loop
 │   ├── volumetric_video_viewer.py # high-performance viewer
 │   └── ...
-├── scripts # entry points for EasyVolcap, all command-line should start from here
-│   ├── main.py # evc -t test ...
-│   └── wrap.py # evc-gui, evc-dist ...
+├── scripts # entry points for EasyVolcap, all command-line should start from here. Check pyproject.toml -> [project.scripts] part for details!
+│   ├── main.py # evc -t test ... , evc-train , evc-test
+│   └── wrap.py # evc-gui, evc-dist, evc-prof
 └── utils # store utility functions here, should not import from other modules
     ├── shaders # we place the shaders here for easier loading from gl_utils
     │   ├── splat.vert

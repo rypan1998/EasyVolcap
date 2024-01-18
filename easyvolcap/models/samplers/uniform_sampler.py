@@ -22,10 +22,10 @@ class UniformSampler(VolumetricVideoModule):
         self.uniform_disparity = uniform_disparity
         self.n_samples = n_samples
 
-        self.g = (lambda x: 1 / (x + 1e-10)) if uniform_disparity else (lambda x: x)
+        self.g = (lambda x: 1 / (x + 1e-10)) if uniform_disparity else (lambda x: x) # ? inverse depth space
         self.ig = (lambda x: 1 / (x + 1e-10)) if uniform_disparity else (lambda x: x)
 
-        self.forward = self.sample
+        self.forward = self.sample # * true entry point when invoked.
 
     def sample_depth(self,
                      ray_o: torch.Tensor, ray_d: torch.Tensor,  # not used, but needed for api,
@@ -33,7 +33,7 @@ class UniformSampler(VolumetricVideoModule):
                      t: torch.Tensor,  # not used, but needed for api,
                      batch: dotdict,  # not used, but needed for api,
                      ):  # some sampler do not need batch input, give them the chance
-        # ray_o: B, P, 3
+        # ray_o: B, P, 3 # * P: ray number, 3: ray start point coordinate
         # ray_d: B, P, 3
         # t: B, P, 1
         # return: B, P, S, 3

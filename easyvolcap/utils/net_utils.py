@@ -977,10 +977,10 @@ def weighted_percentile(t: torch.Tensor, w: torch.Tensor, ps: List[float]):
 
 
 def s_vals_to_z_vals(s: torch.Tensor,
-                     tn: torch.Tensor,
-                     tf: torch.Tensor,
-                     g: Callable[[torch.Tensor], torch.Tensor] = lambda x: 1 / x,
-                     ig: Callable[[torch.Tensor], torch.Tensor] = lambda x: 1 / x,
+                     tn: torch.Tensor, # near plane value in t space
+                     tf: torch.Tensor, # far plane value in t space
+                     g: Callable[[torch.Tensor], torch.Tensor] = lambda x: 1 / x, # t space -> s space
+                     ig: Callable[[torch.Tensor], torch.Tensor] = lambda x: 1 / x, # s space -> t space
                      ):
     # transfer ray depth from s space to t space (with inverse of g)
     return ig(s * g(tf) + (1 - s) * g(tn))
@@ -1015,6 +1015,7 @@ def linear_sampling(*shape,
     # No single jitter, use full jitter
     if perturb: s_vals = s_vals + torch.rand_like(s_vals) / S  # S,
     else: s_vals = s_vals + 0.5 / S  # S,
+    
     return s_vals
 
 # Hierarchical sampling (section 5.2)
@@ -1928,8 +1929,10 @@ def compute_dist(z_vals: torch.Tensor, dist_default: float = -1.0):
 
 @torch.jit.script
 def ray2xyz(ray_o: torch.Tensor, ray_d: torch.Tensor, t: torch.Tensor, z_vals: torch.Tensor, dist_default: float = -1.0):
+    """change representation from ray+vector to xyz."""
     # ray_o: B, P, 3
     # ray_d: B, P, 3
+    # t: B, P, 1
     # z_vals: B, P, S
     # batch: dotdict
 

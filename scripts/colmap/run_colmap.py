@@ -32,7 +32,7 @@ def parse_args():
     parser.add_argument("--colmap_camera_model", default="OPENCV", choices=["SIMPLE_PINHOLE", "PINHOLE", "SIMPLE_RADIAL", "RADIAL", "OPENCV"], help="camera model")
     parser.add_argument("--colmap_camera_params", default="", help="intrinsic parameters, depending on the chosen model.  Format: fx, fy, cx, cy, dist")
 
-    parser.add_argument('--data_root', default='data/zju/ip412')
+    parser.add_argument('--data_root', default='data/zju/zju3dv')
     parser.add_argument("--mask", default="mask/00", help="input path to the mask")
     parser.add_argument("--images", default="images/00", help="input path to the images")
     parser.add_argument("--bkgd_mask", default="bkgd_mask/00", help="input path to the mask")

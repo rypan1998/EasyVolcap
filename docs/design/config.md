@@ -8,7 +8,7 @@ The original `mmcv` config support parent (base) config, and an easy-to-use file
 Here's an example config chain:
 
 ```yaml
-# Content of renbody.yaml (parent config)
+# Content of configs/datasets/renbody/renbody.yaml (parent config)
 dataloader_cfg: # we see the term "dataloader" as one word?
     dataset_cfg: &dataset_cfg
         masks_dir: masks # good naming ^_^
