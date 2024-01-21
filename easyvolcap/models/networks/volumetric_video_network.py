@@ -176,7 +176,7 @@ class VolumetricVideoNetwork(GradientModule):
         # Pass 4d embedder
         xyzt_feat = self.xyzt_embedder(param_xyz, t, batch)  # find previous output in batch.output
 
-        # Pass deformation
+        # Pass deformation 
         resd: torch.Tensor = self.deformer(xyzt_feat, batch)  # (B, P, 6)
         if resd.shape[-1] == 6: resd_xyz = apply_rt(param_xyz, resd)  # MARK: this might be heavy
         elif resd.shape[-1] == 3: resd_xyz = param_xyz + resd
@@ -192,7 +192,7 @@ class VolumetricVideoNetwork(GradientModule):
         if self.geo_use_xyzt_feat: geo_in_feat.append(xyzt_feat)
         if self.geo_use_xyz_feat: geo_in_feat.append(xyz_feat)
         geo_in_feat = torch.cat(geo_in_feat, dim=-1)
-        geometry: torch.Tensor = self.geometry(geo_in_feat, batch)
+        geometry: torch.Tensor = self.geometry(geo_in_feat, batch) # * geometry feat
 
         # https://github.com/pytorch/pytorch/issues/27336
         # Still waiting on update from pytorch to avoid this awkward splitting
@@ -304,7 +304,7 @@ class VolumetricVideoNetwork(GradientModule):
         # output: dotdict, output from sampler, should integrate on this
 
         # This pipeline should cover most of the cases
-        # So try to only change its inner part instead of the whole pipeline
+        # * So try to only change its inner part instead of the whole pipeline
         # Unless you're looking for doing funny things like stream training or meta-learning
 
         # Forward pass for the network components

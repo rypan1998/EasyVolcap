@@ -54,7 +54,7 @@ class ImageBasedRegressor(nn.Module):
             for i in range(B):  # TODO: PERF
                 for j in range(S):
                     feat = torch.cat([geo_feat[i], src_feat[i, j]], dim=-1)  # P, C
-                    rgb_bws.append(forward_mlp(feat))  # P, 1
+                    rgb_bws.append(forward_mlp(feat))  # P, 1 # * blending weight
             rgb_bws = torch.stack(rgb_bws)  # BS, P, 1
             rgb_bws = rgb_bws.view(B, S, P, -1)  # B, S, P, 1
         else:
@@ -64,5 +64,5 @@ class ImageBasedRegressor(nn.Module):
             rgb_bws = forward_mlp(geo_feat)
 
         rgb_bws = rgb_bws.softmax(-3)  # B, S, P, 1
-        rgb = (src_rgbs * rgb_bws).sum(-3)  # B, P, 3
+        rgb = (src_rgbs * rgb_bws).sum(-3)  # B, P, 3 # * blend final color
         return self.out_actvn(rgb)  # this regressor only produces rgb of enerf for now, need more care for reusing

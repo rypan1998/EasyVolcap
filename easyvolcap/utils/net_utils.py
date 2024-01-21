@@ -158,6 +158,7 @@ def make_buffer(params: torch.Tensor):
 
 
 def take_jacobian(func: Callable, input: torch.Tensor, create_graph=False, vectorize=True, strategy='reverse-mode'):
+    """d(func)/d(input)"""
     return torch.autograd.functional.jacobian(func, input, create_graph=create_graph, vectorize=vectorize, strategy=strategy)
 
 
@@ -168,6 +169,7 @@ def take_gradient(output: torch.Tensor,
                   retain_graph: bool = True,
                   is_grads_batched: bool = False,
                   ):
+    """d_out = d(output)/d(input)"""
     if d_out is not None:
         d_output = d_out
     elif isinstance(output, torch.Tensor):
