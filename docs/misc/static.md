@@ -28,7 +28,7 @@ The parameter choices provided in the script were tested with a recording of [*X
 Here we assume the user has the following directory structure after completing the data preprocessing step.
 
 ```shell
-data/mww/zju3dv # data_root & datadir
+data/zju/zju3dv # data_root & datadir
 ├── intri.yml # required
 ├── extri.yml # required
 ├── images # required

@@ -202,6 +202,7 @@ destination_folder="${datadir}/vhulls"
 mkdir -p ${destination_folder}
 
 # Loop through all .ply files in the source directory
+# change name: frame0029.ply -> 000029.ply
 for file in ${source_folder}/*.ply; do
     number=$(echo $(basename ${file}) | sed -e 's/frame\([0-9]*\).ply/\1/')
     formatted_number=$(printf "%06d" ${number})
@@ -221,7 +222,10 @@ The [`colmap.yaml`](configs/specs/colmap.yaml) provides some heuristics for larg
 
 ```shell
 # Train a 3DGS model on the ${expname} dataset
-evc -c configs/exps/gaussiant/gaussiant_${expname}.yaml # might run out of VRAM, try reducing densify until iter
+# changes in configs/exps/gaussiant/gaussiant_actor1_4_subseq.yaml
+# 1. n_points: I encountered an error when 262144, and indicated 306894 was the right value.
+# 2. densify_until_iter: might run out of VRAM, try reducing its value. I didn't change this.
+evc -c configs/exps/gaussiant/gaussiant_${expname}.yaml
 
 # Perform rendering on the trained ${expname} dataset
 evc -t test -c configs/exps/gaussiant/gaussiant_${expname}.yaml,configs/specs/superm.yaml,configs/specs/spiral.yaml

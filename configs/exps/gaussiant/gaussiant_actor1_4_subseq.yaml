@@ -5,7 +5,8 @@ configs:
 
 model_cfg: # this config will prevent EasyVolcap from preprocessing the init point clouds
     sampler_cfg:
-        n_points: 262144 # avoid too large point count
+        # n_points: 262144 # avoid too large point count
+        n_points: 306894 # got this from error message
         densify_until_iter: 50000 # densify for longer since this is a dynamic dataset
 
 runner_cfg:

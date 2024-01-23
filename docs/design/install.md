@@ -82,7 +82,8 @@ Then, add these lines to your `.zshrc` or `.bashrc` to expose related paths for 
 # CUDA related configs
 export PATH="/usr/local/cuda/bin:$PATH"
 export LD_LIBRARY_PATH="/usr/local/cuda/lib64:$LD_LIBRARY_PATH"
-export CUDA_HOME="/usr/local/cuda"
+# @rypan DO NOT Add `CUDA_DEVICE_ORDER` unless you have trouble with test samples !!
+export CUDA_HOME="/usr/local/cuda" # @rypan unnecessary maybe
 export CUDA_DEVICE_ORDER=PCI_BUS_ID # OPTIONAL: defaults to capability order, might be different for GL and CUDA
 ```
 
