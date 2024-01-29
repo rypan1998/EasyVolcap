@@ -1,4 +1,4 @@
-_: &mlp_size
+_: &mlp_size # config from VolumetricVideoNetwork
     geometry_cfg:
         width: 32
         depth: 1

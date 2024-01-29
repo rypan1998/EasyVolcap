@@ -9,7 +9,7 @@ from easyvolcap.utils.base_utils import dotdict
 
 @REGRESSORS.register_module()
 class SplitRegressor(nn.Module):
-    # Outputs occupancy (used as alpha in volume rendering)
+    # * Outputs occupancy (used as alpha in volume rendering)
     def __init__(self,
                  in_dim: int,
                  width: int = 256,
