@@ -8,7 +8,7 @@ The original `mmcv` config support parent (base) config, and an easy-to-use file
 Here's an example config chain:
 
 ```yaml
-# Content of configs/datasets/renbody/renbody.yaml (parent config)
+# configs/datasets/renbody/renbody.yaml
 dataloader_cfg: # we see the term "dataloader" as one word?
     dataset_cfg: &dataset_cfg
         masks_dir: masks # good naming ^_^
@@ -33,7 +33,7 @@ val_dataloader_cfg:
         view_sample: [0, 60, 20]
 
 
-# Content of 0013_01.yaml (inner config, child of renbody.yaml, parent of 0013_01_obj.yaml)
+# 0013_01.yaml
 configs: configs/datasets/renbody/renbody.yaml
 
 dataloader_cfg: # we see the term "dataloader" as one word?
@@ -45,7 +45,7 @@ val_dataloader_cfg:
     dataset_cfg:
         <<: *dataset_cfg
 
-# Content of 0013_01_obj.yaml (child of 0013_01.yaml)
+# 0013_01_obj.yaml
 configs: configs/datasets/renbody/0013_01.yaml
 
 dataloader_cfg: &dataloader_cfg
