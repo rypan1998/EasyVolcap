@@ -1,6 +1,6 @@
 dataloader_cfg: # we see the term "dataloader" as one word?
     dataset_cfg: &dataset_cfg
-        use_aligned_cameras: False
+        use_aligned_cameras: False # whether center the bounding box
         dist_opt_K: True # useful for large distortion values
         cache_raw: True # static dataset benefits from storing everything as raw tensors in memory
         vhulls_dir: vhulls

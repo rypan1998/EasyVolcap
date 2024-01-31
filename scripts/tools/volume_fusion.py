@@ -60,7 +60,7 @@ def fuse(runner: "VolumetricVideoRunner", args: argparse.Namespace):
 
     dataset = runner.val_dataloader.dataset
     inds = get_inds(dataset)
-    nv, nl = inds.shape[:2]
+    nv, nl = inds.shape[:2] # nv: cameras, nl: frames = fps * seconds
     prefix = 'frame'
 
     if dataset.closest_using_t:
@@ -115,7 +115,7 @@ def fuse(runner: "VolumetricVideoRunner", args: argparse.Namespace):
             rgbs.append(rgb)  # keep the cuda version for later geometric fusion
             pbar.update()
 
-        if not args.skip_depth_consistency:
+        if not args.skip_depth_consistency: # depth consistent check, abort illegal points
             if dataset.closest_using_t:
                 c2ws = dataset.c2ws[f]
                 w2cs = dataset.w2cs[f]

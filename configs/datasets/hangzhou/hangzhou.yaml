@@ -1,45 +1,40 @@
 dataloader_cfg: # we see the term "dataloader" as one word?
     dataset_cfg: &dataset_cfg
         data_root: data/hangzhou/20231014093437
+        use_masks: True
+        # use_vhulls: False
+        immask_crop: True
+        imbound_crop: True
+        masks_dir: mask # seg with SCHP
+        ratio: 0.5 # scale images down during loading (thus affects rendering and testing)
+        
+        # near: 12
+        # far: 40
+        bounds: [[-10.0, -10.0, -10.0], [10.0, 10.0, 10.0]]
+        dist_opt_K: false # whether to resize the image so that after distortion, no black pixels will remain
+        use_aligned_cameras: True
 
-        dist_opt_K: True
-        # near: 0
-        # far: 10
-        bounds: [[-10.0, -10.0, -5.0], [10.0, 10.0, 5.0]]
-
-        # masks_dir: bgmtv2
-        vhull_thresh: 1.0
-        count_thresh: 18 # common views
-        vhull_padding: 0.02 # padding could just be larger, this should be mostly fine
-
-        vhull_ctof_factor: 3.0 # larger size?
-        vhull_thresh_factor: 1.0
-        vhull_count_factor: 1.0
-        coarse_discard_masks: False
-        intersect_camera_bounds: False
-
-        use_aligned_cameras: True # will center the bounding box
-        force_sparse_view: True # the user will specify the view count
+        frame_sample: [0, 45, 1] # [begin, end, step]. # 15(fps) * 3(sec) = 45 frames per camera, 200 or so is best, otherwise will OOM 
         view_sample: [0, 8, 1]
-        frame_sample: [0, 45, 1] # only train for a thousand frames
-        focal_ratio: 1.2
 
 val_dataloader_cfg:
     dataset_cfg:
         <<: *dataset_cfg
-        near: 0.5 # more wiggle room during inference
-        frame_sample: [0, 45, 15]
-        interp_cfg:
-            xyz_ratio: [1.0, 0.0, 0.25]
-        temporal_range: [0, 1, 0, 1, 0]
+        use_vhulls: False
+        frame_sample: [0, 45, 15] # make rendering faster, controls which of the views and frames to load
+        # focal_ratio: 0.5 # when generating completely novel views (volumetric_video_inference_dataset), use a smaller focal length to make the scene appear larger
     sampler_cfg:
-        view_sample: [0, 8, 1]
+        view_sample: [0, 8, 2] # make rendering faster, if doing IBR, change the view_sample in sampler_cfg to control which view to render
 
-runner_cfg:
-    visualizer_cfg:
-        video_fps: 15 # azure 15fps
+model_cfg:
+    sampler_cfg:
+        bg_brightness: 0.0
+    renderer_cfg:
+        bg_brightness: 0.0
+    supervisor_cfg:
+        msk_loss_weight: 0.001
 
 viewer_cfg:
     use_window_focal: True
     camera_cfg:
-        world_up: [-1, 0, 0]
+        world_up: [0, -1, 0] # this dataset uses a strange camera system, align it when using the viewer

@@ -158,7 +158,7 @@ configs:
     - configs/specs/optcam.yaml
     - configs/specs/transient.yaml
 ```
-1. The provided dataset comes with masks and you do not want the background to influence the foreground optimization. 
+2. The provided dataset comes with masks and you do not want the background to influence the foreground optimization. 
    Check [`l3mhet_0013_01_static.yaml`](../../configs/exps/l3mhet/l3mhet_0013_01_static.yaml) for an example. Add a [`mask.yaml`](../../config/specs/mask.yaml) to the parent list.
 
 Run the ***L3MHET*** model with camera parameter optimization:

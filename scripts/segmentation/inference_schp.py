@@ -20,7 +20,7 @@ def main():
     parser.add_argument('--chkpt_dir', type=str, default='/nas/home/xuzhen/weights/self-correction-human-parsing')
     args = parser.parse_args()
     args.data_root = abspath(args.data_root)
-    tmp_human_dir = f'{args.data_root}/tmp_human'
+    tmp_human_dir = f'{args.data_root}/tmp_human' # gather all images into this temporary dir.
 
     run_if_not_exists(f'python scripts/segmentation/merge_images_to_one_dir.py {args.data_root} {tmp_human_dir}/images/tmp_cam --one_human', f'{tmp_human_dir}/images/tmp_cam')
     cwd = getcwd()
@@ -37,7 +37,7 @@ def main():
     os.chdir(cwd)
     run(f'python scripts/segmentation/split_images_from_one_dir.py {args.data_root} {tmp_human_dir}/{args.mask_dir}/tmp_cam --mask {args.mask_dir} --one_human')
     run(f'python scripts/segmentation/split_images_from_one_dir.py {args.data_root} {tmp_human_dir}/{args.schp_dir}/tmp_cam --mask {args.schp_dir} --one_human')
-    run(f'rm -rf {tmp_human_dir}')
+    run(f'rm -rf {tmp_human_dir}') # clean up
 
     log(yellow(f'Mask saved to {blue(join(args.data_root, args.mask_dir))} and semantics saved to {blue(join(args.data_root, args.schp_dir))}'))
 
