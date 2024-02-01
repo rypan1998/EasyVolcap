@@ -57,8 +57,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_root', type=str, default='data/iphone/hdr_412')
-    # parser.add_argument('--colmap', type=str, default='colmap/colmap_sparse/0') # .bin files
-    parser.add_argument('--colmap', type=str, default='colmap/colmap_text') # * .txt files
+    parser.add_argument('--colmap', type=str, default='colmap/colmap_sparse/0') # .bin files
     parser.add_argument('--output', type=str, default='', help="*.yml file path")
     parser.add_argument('--sub', type=str, default='')  # only camera name containing this string will be saved
     parser.add_argument('--scale', type=float, default=1.0)

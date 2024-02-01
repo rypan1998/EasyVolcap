@@ -2,16 +2,16 @@ dataloader_cfg: # we see the term "dataloader" as one word?
     dataset_cfg: &dataset_cfg
         data_root: data/hangzhou/20231014093437
         use_masks: True
-        # use_vhulls: False
         immask_crop: True
         imbound_crop: True
         masks_dir: mask # seg with SCHP
         ratio: 0.5 # scale images down during loading (thus affects rendering and testing)
         
-        # near: 12
-        # far: 40
-        bounds: [[-10.0, -10.0, -10.0], [10.0, 10.0, 10.0]]
-        dist_opt_K: false # whether to resize the image so that after distortion, no black pixels will remain
+        # world scale, unit: m
+        near: 0.5
+        far: 2.5
+        bounds: [[-1.5, -1.5, -1.5], [1.5, 1.5, 1.5]]
+        dist_opt_K: True # whether to resize the image so that after distortion, no black pixels will remain
         use_aligned_cameras: True
 
         frame_sample: [0, 45, 1] # [begin, end, step]. # 15(fps) * 3(sec) = 45 frames per camera, 200 or so is best, otherwise will OOM 
@@ -20,7 +20,6 @@ dataloader_cfg: # we see the term "dataloader" as one word?
 val_dataloader_cfg:
     dataset_cfg:
         <<: *dataset_cfg
-        use_vhulls: False
         frame_sample: [0, 45, 15] # make rendering faster, controls which of the views and frames to load
         # focal_ratio: 0.5 # when generating completely novel views (volumetric_video_inference_dataset), use a smaller focal length to make the scene appear larger
     sampler_cfg:
