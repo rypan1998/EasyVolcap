@@ -1,0 +1,9 @@
+# Configuration for ENeRF
+configs:
+    - configs/base.yaml # default arguments for the whole codebase
+    - configs/models/enerfi.yaml # network model configuration
+    - configs/datasets/raspi/raspi.yaml # dataset usage configuration
+    - configs/specs/static.yaml # test for only one frame
+
+# prettier-ignore
+exp_name: {{fileBasenameNoExtension}}
