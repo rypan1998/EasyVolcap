@@ -29,6 +29,13 @@ from enum import Enum, auto
 # Copied from enerf (maybe was in turn copied from dtu)
 
 
+def read_pickle(name):
+    import pickle
+    with open(name, 'rb') as f:
+        data = pickle.load(f, encoding='latin1')
+    return data
+
+
 def read_cam_file(filename):
     with open(filename) as f:
         lines = [line.rstrip() for line in f.readlines()]
@@ -215,7 +222,7 @@ def get_video_dimensions(input_filename):
     return width, height
 
 
-def video_to_numpy(input_filename):
+def video_to_numpy(input_filename, hwaccel='cuda', vcodec='hevc_cuvid'):
     """
     Convert a video file to a numpy array (T, H, W, C) using ffmpeg.
 
@@ -229,9 +236,15 @@ def video_to_numpy(input_filename):
 
     cmd = [
         'ffmpeg',
-        '-hwaccel', 'cuda',
+    ]
+    if hwaccel != 'none':
+        cmd += ['-hwaccel', hwaccel,]
+    cmd += [
         '-v', 'quiet', '-stats',
-        '-vcodec', 'hevc_cuvid',
+    ]
+    if vcodec != 'none':
+        cmd += ['-vcodec', vcodec,]
+    cmd += [
         '-i', input_filename,
         '-f', 'image2pipe',
         '-pix_fmt', 'rgb24',
@@ -245,7 +258,11 @@ def video_to_numpy(input_filename):
     # Convert the raw data to numpy array and reshape
     video_np = np.frombuffer(raw_data, dtype=np.uint8)
     H2, W2 = (H + 1) // 2 * 2, (W + 1) // 2 * 2
-    video_np = video_np.reshape(-1, H2, W2, 3)[:, :H, :W, :]
+    try:
+        video_np = video_np.reshape(-1, H2, W2, 3)[:, :H, :W, :]
+    except ValueError as e:
+        video_np = video_np.reshape(-1, H, W, 3)
+
     return video_np
 
 
@@ -1045,8 +1062,8 @@ def load_image_file(img_path: str, ratio=1.0):
         if ratio != 1.0 and \
             draft is None or \
                 draft is not None and \
-            (draft[1][2] != int(w * ratio) or
-         draft[1][3] != int(h * ratio)):
+        (draft[1][2] != int(w * ratio) or
+             draft[1][3] != int(h * ratio)):
             img = cv2.resize(img, (int(w * ratio), int(h * ratio)), interpolation=cv2.INTER_AREA)
         return img
     else:
@@ -1098,8 +1115,8 @@ def load_unchanged(img_path: str, ratio=1.0):
         if ratio != 1.0 and \
             draft is None or \
                 draft is not None and \
-            (draft[1][2] != int(w * ratio) or
-         draft[1][3] != int(h * ratio)):
+        (draft[1][2] != int(w * ratio) or
+             draft[1][3] != int(h * ratio)):
             img = cv2.resize(img, (int(w * ratio), int(h * ratio)), interpolation=cv2.INTER_AREA)
         return img
     else:
@@ -1124,8 +1141,8 @@ def load_mask(msk_path: str, ratio=1.0):
         if ratio != 1.0 and \
             draft is None or \
                 draft is not None and \
-            (draft[1][2] != int(w * ratio) or
-         draft[1][3] != int(h * ratio)):
+        (draft[1][2] != int(w * ratio) or
+             draft[1][3] != int(h * ratio)):
             msk = cv2.resize(msk.astype(np.uint8), (int(w * ratio), int(h * ratio)), interpolation=cv2.INTER_NEAREST)[..., None]
         return msk
     else:
