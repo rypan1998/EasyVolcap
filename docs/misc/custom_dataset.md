@@ -261,9 +261,11 @@ rm -r ${data_root}/vhulls
 
 # Extract visual hulls
 evc -t test -c configs/base.yaml,configs/models/point_planes.yaml,configs/datasets/renbody/0013_01.yaml,configs/specs/vhulls.yaml val_dataloader_cfg.dataset_cfg.ratio=0.5
+evc -t test -c configs/base.yaml,configs/models/point_planes.yaml,configs/datasets/raspi/raspi.yaml,configs/specs/vhulls.yaml val_dataloader_cfg.dataset_cfg.ratio=0.5
 
 # Preprocess visual hulls
 evc -t test -c configs/base.yaml,configs/models/point_planes.yaml,configs/datasets/renbody/0013_01.yaml,configs/specs/surfs.yaml
+evc -t test -c configs/base.yaml,configs/models/point_planes.yaml,configs/datasets/raspi/raspi.yaml,configs/specs/surfs.yaml
 
 # Extract on optimized cameras
 
