@@ -37,8 +37,8 @@ from easyvolcap.utils.color_utils import cm_cpu_store
 from easyvolcap.utils.image_utils import interpolate_image, resize_image
 from easyvolcap.utils.prof_utils import setup_profiler, profiler_step, profiler_start, profiler_stop
 from easyvolcap.utils.imgui_utils import push_button_color, pop_button_color, tooltip, colored_wrapped_text
-from easyvolcap.utils.viewer_utils import Camera, CameraPath, visualize_cameras, visualize_cube, add_debug_line, add_debug_text, visualize_axes, add_debug_text_2d
 from easyvolcap.utils.data_utils import add_batch, add_iter, to_cpu, to_cuda, to_tensor, to_x, default_convert, default_collate, save_image, load_image, Visualization
+from easyvolcap.utils.viewer_utils import Camera, CameraPath, visualize_cameras, visualize_cube, add_debug_line, add_debug_text, visualize_axes, add_debug_text_2d, lookat_bounds
 
 
 @RUNNERS.register_module()
@@ -181,7 +181,22 @@ class VolumetricVideoViewer:
 
         # Others
         self.skip_exception = skip_exception
-        self.static = dotdict(batch=dotdict(), output=dotdict())  # static data store updated through the rendering
+
+        # Handle background color change (and with a random bg color switch)
+        # Check which mode are we in? Custom sampler or full model? The order matters
+        if hasattr(self.model.renderer, 'bg_brightness'):
+            bg_brightness = self.model.renderer.bg_brightness
+        elif hasattr(self.model.sampler, 'bg_brightness'):
+            bg_brightness = self.model.sampler.bg_brightness
+        else:
+            bg_brightness = 0.0
+
+        import OpenGL.GL as gl
+
+        bg_brightness = np.clip(bg_brightness, 0.0, 1.0)
+        gl.glClearColor(bg_brightness, bg_brightness, bg_brightness, 1.)
+
+        self.static = dotdict(batch=dotdict(), output=dotdict(), bg_brightness=bg_brightness)  # static data store updated through the rendering
         self.dynamic = dotdict()
 
     @property
@@ -235,8 +250,9 @@ class VolumetricVideoViewer:
         self.shutdown()
 
     def frame(self):
+        # Clear frame buffers
         import OpenGL.GL as gl
-        # Clear frame buffer
+
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
         self.dynamic = dotdict()
 
@@ -404,7 +420,7 @@ class VolumetricVideoViewer:
                 imgui.push_item_width(self.static.slider_width * 0.5)
                 self.camera.n = imgui.slider_float('Near', self.camera.n, 0.002, self.camera.f - 0.01, format='%.6f')[1]
                 imgui.same_line()  # near bound
-                self.camera.f = imgui.slider_float('Far', self.camera.f, self.camera.n + 0.01, 100, format='%.6f')[1]  # far bound
+                self.camera.f = imgui.slider_float('Far', self.camera.f, self.camera.n + 0.01, 500.0, format='%.6f')[1]  # far bound
                 imgui.pop_item_width()
                 imgui.tree_pop()
 
@@ -417,7 +433,7 @@ class VolumetricVideoViewer:
                 self.discrete_t = imgui_toggle.toggle('Discrete time', self.discrete_t, config=self.static.toggle_ios_style)[1]
                 imgui.pop_item_width()
                 if self.discrete_t: self.playing_fps = imgui.slider_int('Video FPS', self.playing_fps, 10, 120)[1]  # temporal interpolation
-                else: self.playing_speed = imgui.slider_float('Video Speed', self.playing_speed, 0.0001, 0.1)[1]  # temporal interpolation
+                else: self.playing_speed = imgui.slider_float('Video speed', self.playing_speed, 0.0001, 0.01, format='%.6f')[1]  # temporal interpolation
                 imgui.tree_pop()
 
         # Other updates
@@ -511,22 +527,22 @@ class VolumetricVideoViewer:
 
                 # Tet the user's choice of background color
                 bg_brightness = -1.0 if is_random_bkgd else (bg_brightness if bg_brightness >= 0 else 0.0)  # 1-2ms faster on wsl
-                bg_brightness = imgui.slider_float('Bkgd brightness', bg_brightness, 0.0, 1.0)[1]  # not always clamp
-                set_bg_brightness(bg_brightness)
+                changed, bg_brightness = imgui.slider_float('Bkgd brightness', bg_brightness, 0.0, 1.0)  # not always clamp
+                if changed:
+                    set_bg_brightness(bg_brightness)
+                    self.static.bg_brightness = bg_brightness
 
-                if not is_random_bkgd:
-                    # Set bg color for the whole window
                     import OpenGL.GL as gl
                     bg_brightness = np.clip(bg_brightness, 0.0, 1.0)
                     gl.glClearColor(bg_brightness, bg_brightness, bg_brightness, 1.)
             else:
-                if 'bg_brightness' not in self.static: self.static.bg_brightness = 0.0
-                self.static.bg_brightness = imgui.slider_float('Bkgd brightness', self.static.bg_brightness, 0.0, 1.0)[1]  # not always clamp
+                changed, bg_brightness = imgui.slider_float('Bkgd brightness', self.static.bg_brightness, 0.0, 1.0)  # not always clamp
+                if changed:
+                    self.static.bg_brightness = bg_brightness
 
-                # Set bg color for the whole window
-                import OpenGL.GL as gl
-                bg_brightness = np.clip(self.static.bg_brightness, 0.0, 1.0)
-                gl.glClearColor(bg_brightness, bg_brightness, bg_brightness, 1.)
+                    import OpenGL.GL as gl
+                    bg_brightness = np.clip(bg_brightness, 0.0, 1.0)
+                    gl.glClearColor(bg_brightness, bg_brightness, bg_brightness, 1.)
 
             # Almost all models has this option
             if network_available: self.quad.compose_power = imgui.slider_float('Compose power', self.quad.compose_power, 1.0, 10.0)[1]  # temporal interpolation
@@ -845,7 +861,7 @@ class VolumetricVideoViewer:
                 self.static.mesh_class = Mesh
             if imgui.button('Add point splat from file'):
                 self.static.add_mesh_dialog = pfd.open_file('Select file', filters=['PLY Files', '*.ply'])
-                self.static.mesh_class = Splat
+                self.static.mesh_class = PointSplat
             if imgui.button('Add gaussian splat from file'):
                 self.static.add_mesh_dialog = pfd.open_file('Select file', filters=['3DGS Files', '*.ply *.npz *.pt *.pth'])
                 self.static.mesh_class = Gaussian
@@ -881,6 +897,8 @@ class VolumetricVideoViewer:
         if imgui.collapsing_header('Debugging'):
             imgui.text('The UI will freeze to switch control to pdbr')
             imgui.text('Use "c" in pdbr to continue normal execution')
+            imgui.text('Do not use these in fullscreen mode since you\'ll be unable to switch to the terminal')
+            imgui.text('Unless you\'ve got a second monitor and the GUI and terminal are on different screens')
             push_button_color(0xff3355ff)
             if imgui.button('Invoke pdbr (go see the terminal)'):
                 breakpoint()  # preserve tqdm (do not use debugger())
@@ -903,11 +921,11 @@ class VolumetricVideoViewer:
         imgui.pop_font()
 
         # Full frame timings
-        self.runner.collect_timing = imgui_toggle.toggle('Collect timing', self.runner.collect_timing, config=self.static.toggle_ios_style)[1]
-        changed, value = imgui_toggle.toggle('Record timing', self.runner.timer_record_to_file, config=self.static.toggle_ios_style)
+        self.runner.collect_timing = imgui_toggle.toggle('Record timing', self.runner.collect_timing, config=self.static.toggle_ios_style)[1]
+        changed, value = imgui_toggle.toggle('Save timing', self.runner.timer_record_to_file, config=self.static.toggle_ios_style)
         if changed:
             self.runner.timer_record_to_file = value
-        self.runner.timer_sync_cuda = imgui_toggle.toggle('Sync timing', self.runner.timer_sync_cuda, config=self.static.toggle_ios_style)[1]
+        self.runner.timer_sync_cuda = not imgui_toggle.toggle('Unsync timing', not self.runner.timer_sync_cuda, config=self.static.toggle_ios_style)[1]
         changed, self.use_vsync = imgui_toggle.toggle('Enable VSync', self.use_vsync, config=self.static.toggle_ios_style)
         if changed:
             glfw.swap_interval(self.use_vsync)
@@ -1215,7 +1233,8 @@ class VolumetricVideoViewer:
         curr_time = time.perf_counter()
         if first_run or curr_time - self.static.last_memory_update > self.update_mem_time:
             self.static.name = torch.cuda.get_device_name()
-            self.static.device = next(self.model.parameters()).device
+            # self.static.device = next(self.model.parameters()).device
+            self.static.device = torch.cuda.current_device()
             self.static.memory = torch.cuda.max_memory_allocated()
             self.static.last_memory_update = curr_time
         return self.static.name, self.static.device, self.static.memory
@@ -1326,6 +1345,7 @@ class VolumetricVideoViewer:
         # Everything should have been prepared in the dataset
         # We load the first camera out of it
         dataset = self.dataset
+        camera_cfg = deepcopy(camera_cfg)
         H, W = self.window_size  # dimesions
         M = max(H, W)
 
@@ -1343,14 +1363,28 @@ class VolumetricVideoViewer:
                 K = dataset.Ks[view_index, 0].clone()
                 ratio = M / max(dataset.Hs[view_index, 0], dataset.Ws[view_index, 0])
             K[:2] *= ratio
+        K = camera_cfg.pop('K', K)
 
         if view_index is None:
-            R, T = dataset.Rv.clone(), dataset.Tv.clone()  # intrinsics and extrinsics
+            # Performing initialization
+            if hasattr(dataset, 'Rv') and hasattr(dataset, 'Tv'):
+                R, T = dataset.Rv.clone(), dataset.Tv.clone()
+            else:
+                # Compute from bbox
+                world_up = camera_cfg.world_up if 'world_up' in camera_cfg else [0, 0, 1]
+                R, T = lookat_bounds(dataset.bounds, world_up)
+            R = camera_cfg.pop('R', R)
+            T = camera_cfg.pop('T', T)
+
         else:
+            # Select dataset camera
             R, T = dataset.Rs[view_index, 0], dataset.Ts[view_index, 0]
 
-        n, f, t, v = dataset.near, dataset.far, 0, 0  # use 0 for default t
-        bounds = dataset.bounds.clone()  # avoids modification
+        n = camera_cfg.pop('n', dataset.near)
+        f = camera_cfg.pop('f', dataset.far)
+        t = camera_cfg.pop('t', 0)
+        v = camera_cfg.pop('v', 0)
+        bounds = camera_cfg.pop('bounds', dataset.bounds.clone())   # avoids modification
         self.camera = Camera(H, W, K, R, T, n, f, t, v, bounds, **camera_cfg)
         self.camera.front = self.camera.front  # perform alignment correction
         self.snap_camera_index = view_index if view_index is not None else 0

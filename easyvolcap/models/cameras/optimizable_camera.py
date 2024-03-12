@@ -27,6 +27,9 @@ class OptimizableCamera(nn.Module):
     center = bounds.sum(-2) / 2
     radius = (bounds[1] - bounds[0]).max() / 2
     square_bounds = torch.stack([center - radius, center + radius])
+    scene_scale = cfg.dataloader_cfg.dataset_cfg.scene_scale if 'scene_scale' in cfg.dataloader_cfg.dataset_cfg else 1.0  # is the scene of real world scale?
+    duration = cfg.dataloader_cfg.dataset_cfg.duration if 'duration' in cfg.dataloader_cfg.dataset_cfg else 1.0  # length in real world time
+    # world_up = cfg.viewer_cfg.camera_cfg.world_up if 'world_up' in cfg.dataloader_cfg.dataset_cfg else [0, 0, 1]  # only used for initialization
 
     data_root = cfg.dataloader_cfg.dataset_cfg.data_root if 'data_root' in cfg.dataloader_cfg.dataset_cfg else ''
     vhulls_dir = cfg.dataloader_cfg.dataset_cfg.vhulls_dir if 'vhulls_dir' in cfg.dataloader_cfg.dataset_cfg else 'vhulls'
@@ -75,6 +78,15 @@ class OptimizableCamera(nn.Module):
 
         if freeze_camera:
             freeze_module(self)
+
+        self.pre_handle = self._register_load_state_dict_pre_hook(self._load_state_dict_pre_hook)
+
+    def _load_state_dict_pre_hook(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
+
+        # Historical reasons
+        if prefix + 'pose_resd' in state_dict:
+            if state_dict[prefix + 'pose_resd'].shape[0] == self.n_views and state_dict[prefix + 'pose_resd'].shape[1] == self.n_frames:
+                state_dict[prefix + 'pose_resd'] = state_dict[prefix + 'pose_resd'].transpose(0, 1)
 
     def forward_srcs(self, batch: dotdict):
         s_inds = batch.src_inds  # B, S, selected source views

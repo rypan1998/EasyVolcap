@@ -101,6 +101,7 @@ def inverse_sigmoid(x):
     return torch.log(x / (1 - x))
 
 
+@torch.jit.script
 def strip_lowerdiag(L: torch.Tensor):
     uncertainty = torch.zeros((L.shape[0], 6), dtype=torch.float, device=L.device)
 
@@ -117,6 +118,7 @@ def strip_symmetric(sym):
     return strip_lowerdiag(sym)
 
 
+@torch.jit.script
 def build_rotation(r: torch.Tensor):
     norm = torch.sqrt(r[:, 0] * r[:, 0] + r[:, 1] * r[:, 1] + r[:, 2] * r[:, 2] + r[:, 3] * r[:, 3])
 
@@ -154,11 +156,11 @@ def build_scaling_rotation(s: torch.Tensor, r: torch.Tensor):
 
 
 def fov2focal(fov, pixels):
-    return pixels / (2 * math.tan(fov / 2))
+    return pixels / (2 * np.tan(fov / 2))
 
 
 def focal2fov(focal, pixels):
-    return 2 * math.atan(pixels / (2 * focal))
+    return 2 * np.arctan(pixels / (2 * focal))
 
 
 def getWorld2View(R: torch.Tensor, t: torch.Tensor):
@@ -174,7 +176,7 @@ def getWorld2View(R: torch.Tensor, t: torch.Tensor):
     return T
 
 
-def getProjectionMatrix(K: torch.Tensor, H, W, znear=0.001, zfar=1000):
+def getProjectionMatrix(K: torch.Tensor, H: float, W: float, znear=0.001, zfar=1000):
     fx = K[0, 0]
     fy = K[1, 1]
     cx = K[0, 2]
@@ -183,8 +185,6 @@ def getProjectionMatrix(K: torch.Tensor, H, W, znear=0.001, zfar=1000):
 
     P = torch.zeros(4, 4, dtype=K.dtype, device=K.device)
 
-    z_sign = 1.0
-
     P[0, 0] = 2 * fx / W
     P[0, 1] = 2 * s / W
     P[0, 2] = -1 + 2 * (cx / W)
@@ -192,9 +192,10 @@ def getProjectionMatrix(K: torch.Tensor, H, W, znear=0.001, zfar=1000):
     P[1, 1] = 2 * fy / H
     P[1, 2] = -1 + 2 * (cy / H)
 
-    P[2, 2] = z_sign * (zfar + znear) / (zfar - znear)
-    P[2, 3] = z_sign * 2 * zfar * znear / (zfar - znear)
-    P[3, 2] = z_sign
+    P[2, 2] = 1 * (zfar + znear) / (zfar - znear)
+    P[2, 3] = -1 * zfar * znear / (zfar - znear)
+
+    P[3, 2] = 1
 
     return P
 
@@ -231,10 +232,13 @@ def prepare_gaussian_camera(batch):
 def convert_to_gaussian_camera(K: torch.Tensor,
                                R: torch.Tensor,
                                T: torch.Tensor,
+                               meta_K: torch.Tensor,
+                               meta_R: torch.Tensor,
+                               meta_T: torch.Tensor,
                                H: int,
                                W: int,
                                znear: float = 0.01,
-                               zfar: float = 100.
+                               zfar: float = 100.,
                                ):
     output = dotdict()
 
@@ -244,21 +248,24 @@ def convert_to_gaussian_camera(K: torch.Tensor,
     output.K = K
     output.R = R
     output.T = T
+    output.meta_K = meta_K
+    output.meta_R = meta_R
+    output.meta_T = meta_T
 
-    fl_x = K[0, 0]
-    fl_y = K[1, 1]
+    output.znear = znear
+    output.zfar = zfar
 
-    output.FoVx = focal2fov(fl_x, output.image_width)
-    output.FoVy = focal2fov(fl_y, output.image_height)
+    output.FoVx = focal2fov(meta_K[0, 0], output.image_width)
+    output.FoVy = focal2fov(meta_K[1, 1], output.image_height)
 
     output.world_view_transform = getWorld2View(output.R, output.T).transpose(0, 1)
-    output.projection_matrix = getProjectionMatrix(output.K, output.image_height, output.image_width, znear, zfar).transpose(0, 1)
+    output.projection_matrix = getProjectionMatrix(output.K, float(output.image_height), float(output.image_width), znear, zfar).transpose(0, 1)
     output.full_proj_transform = torch.matmul(output.world_view_transform, output.projection_matrix)  # 4, 4
     output.camera_center = output.world_view_transform.inverse()[3:, :3]
 
     # Set up rasterization configuration
-    output.tanfovx = math.tan(output.FoVx * 0.5)
-    output.tanfovy = math.tan(output.FoVy * 0.5)
+    output.tanfovx = np.tan(output.FoVx * 0.5)
+    output.tanfovy = np.tan(output.FoVy * 0.5)
 
     return output
 
@@ -687,12 +694,19 @@ class GaussianModel(nn.Module):
 
         extra_f_names = [k for k in scalars.keys() if k.startswith("f_rest_")]
         extra_f_names = sorted(extra_f_names, key=lambda x: int(x.split('_')[-1]))
-        assert len(extra_f_names) == 3 * (self.max_sh_degree + 1) ** 2 - 3
-        features_rest = torch.zeros((xyz.shape[0], len(extra_f_names), 1))
-        for idx, attr_name in enumerate(extra_f_names):
-            features_rest[:, idx] = torch.from_numpy(np.asarray(scalars[attr_name]))
-        # Reshape (P,F*SH_coeffs) to (P, F, SH_coeffs except DC)
-        features_rest = features_rest.view(features_rest.shape[0], 3, (self.max_sh_degree + 1) ** 2 - 1)
+
+        # Load max_sh_degree from file
+        for i in range(3):
+            if len(extra_f_names) == 3 * (i + 1) ** 2 - 3:
+                self.max_sh_degree = i
+                # assert len(extra_f_names) == 3 * (self.max_sh_degree + 1) ** 2 - 3
+                features_rest = torch.zeros((xyz.shape[0], len(extra_f_names), 1))
+
+                for idx, attr_name in enumerate(extra_f_names):
+                    features_rest[:, idx] = torch.from_numpy(np.asarray(scalars[attr_name]))
+
+                # Reshape (P,F*SH_coeffs) to (P, F, SH_coeffs except DC)
+                features_rest = features_rest.view(features_rest.shape[0], 3, (self.max_sh_degree + 1) ** 2 - 1)
 
         state_dict = dotdict()
         state_dict._xyz = xyz
@@ -705,7 +719,7 @@ class GaussianModel(nn.Module):
         self.load_state_dict(state_dict, strict=False)
         self.active_sh_degree.data.fill_(self.max_sh_degree)
 
-    def render(self, batch: dotdict):
+    def render(self, batch: dotdict, scale_mult: float = 1.0, alpha_mult: float = 1.0):
         # TODO: Make rendering function easier to read, now there're at least 3 types of gaussian rendering function
         from diff_gauss import GaussianRasterizationSettings, GaussianRasterizer
 
@@ -747,8 +761,8 @@ class GaussianModel(nn.Module):
             means2D=scr,
             shs=sh,
             colors_precomp=None,
-            opacities=occ,
-            scales=scale3,
+            opacities=occ * alpha_mult,
+            scales=scale3 * scale_mult,
             rotations=rot4,
             cov3D_precomp=None,
         )
